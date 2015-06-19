@@ -365,20 +365,7 @@ namespace VncSharp
 			rfb.WriteClientInitialisation(true);
 			buffer = rfb.ReadServerInit();
 
-			var client = new Framebuffer(buffer.Width, buffer.Height)
-			{
-				BitsPerPixel = 32,
-				Depth = 24,
-				TrueColour = true,
-				BigEndian = false,
-				DesktopName = "SharpVnc",
-				RedMax = 255,
-				GreenMax = 255,
-				BlueMax = 255,
-				RedShift = 16,
-				GreenShift = 8,
-				BlueShift = 0
-			};
+			var client = GetClientFb(buffer);
 
 			rfb.WriteSetPixelFormat(client);	// just use the server's framebuffer format
 
@@ -391,6 +378,31 @@ namespace VncSharp
 			
 			// Create an EncodedRectangleFactory so that EncodedRectangles can be built according to set pixel layout
 			factory = new EncodedRectangleFactory(rfb, client);
+		}
+
+		private Framebuffer GetClientFb(Framebuffer serverFb)
+		{
+			var bps = Screen.PrimaryScreen.BitsPerPixel;
+			var depth = bps;
+
+			if (bps == 32) { depth = 24; }
+
+			var client = new Framebuffer(buffer.Width, buffer.Height)
+			{
+				BitsPerPixel = bps,
+				Depth = depth,
+				TrueColour = true,
+				BigEndian = false,
+				DesktopName = "SharpVnc",
+				RedMax = 255,
+				GreenMax = 255,
+				BlueMax = 255,
+				RedShift = 16,
+				GreenShift = 8,
+				BlueShift = 0
+			};
+
+			return client;
 		}
 
 		/// <summary>
