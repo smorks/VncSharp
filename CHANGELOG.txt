@@ -1,6 +1,14 @@
 Change Log
 ----------
 
+* Version 1.? (Andy Brandt's changes)
+
+- Added ability to pass in open Stream (specifically for use with the XenServer API)
+- Hardcoded the client to identify itself as a 32bit/24depth display. Makes 8-bit servers display property. Future: should auto-detect the proper settings.
+- Tried to fix the 8-bit pixel reader. It was always using the map, attempted put in correct calculations, but it doesn't work quite right.
+- Fixed a bug where the Enter/Return key would be sent twice when using the RemoteDesktop control
+- Normalized to tabs instead of spaces in the files that I worked on (they appeared to be using a combination of both)
+
 * Version 1.0
 
 - Added ZRLE (Grégoire Pailler) using the BSD licensed zlib.NET version 1.04 (http://www.componentace.com/zlib_NET.htm)
