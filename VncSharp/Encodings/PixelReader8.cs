@@ -38,8 +38,17 @@ namespace VncSharp.Encodings
 		/// <returns>Returns an Integer value representing the pixel in GDI+ format.</returns>
 		public override int ReadPixel()
 		{
-			byte idx = reader.ReadByte();
-			return ToGdiPlusOrder((byte)rfb.MapEntries[idx, 0], (byte)rfb.MapEntries[idx, 1], (byte)rfb.MapEntries[idx, 2]);
+			byte pixel = reader.ReadByte();
+			if (framebuffer.TrueColour)
+			{
+				byte red = (byte) ((((pixel >> framebuffer.RedShift) & framebuffer.RedMax)*255)/framebuffer.RedMax);
+				byte green = (byte) ((((pixel >> framebuffer.GreenShift) & framebuffer.GreenMax)*255)/framebuffer.GreenMax);
+				byte blue = (byte) ((((pixel >> framebuffer.BlueShift) & framebuffer.BlueMax)*255)/framebuffer.BlueMax);
+				
+				return ToGdiPlusOrder(red, green, blue);
+			}
+			
+			return ToGdiPlusOrder((byte) rfb.MapEntries[pixel, 0], (byte) rfb.MapEntries[pixel, 1], (byte) rfb.MapEntries[pixel, 2]);
 		}
 	}
 }
