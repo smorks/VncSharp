@@ -774,8 +774,10 @@ namespace VncSharp
 				if (Control.MouseButtons == MouseButtons.Right)  mask += 4;
 
 				Point adjusted = desktopPolicy.UpdateRemotePointer(current);
-				if (adjusted.X < 0 || adjusted.Y < 0)
-					throw new Exception();
+			    if (adjusted.X < 0 || adjusted.Y < 0)
+			    {
+			        Console.WriteLine("UpdateRemotePointer Warning: X:{0}, Y:{1}", adjusted.X, adjusted.Y);
+			    }
 
 				vnc.WritePointerEvent(mask, desktopPolicy.UpdateRemotePointer(current));
 			}
@@ -874,7 +876,7 @@ namespace VncSharp
 			if (e.Handled)
 				return;
 
-			if (e.KeyChar == '\r' || e.KeyChar == '\n') return;
+			if (e.KeyChar == '\r' || e.KeyChar == '\n' || e.KeyChar == '\t') return;
 	
 			if(Char.IsLetterOrDigit(e.KeyChar) || Char.IsWhiteSpace(e.KeyChar) || Char.IsPunctuation(e.KeyChar) ||
 				e.KeyChar == '~' || e.KeyChar == '`' || e.KeyChar == '<' || e.KeyChar == '>' ||

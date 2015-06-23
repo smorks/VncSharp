@@ -385,9 +385,9 @@ namespace VncSharp
 			var bps = Screen.PrimaryScreen.BitsPerPixel;
 			var depth = bps;
 
-			if (bps == 32) { depth = 24; }
+		    if (bps == 32) { depth = 24; }
 
-			var client = new Framebuffer(buffer.Width, buffer.Height)
+			var client = new Framebuffer(serverFb.Width, serverFb.Height)
 			{
 				BitsPerPixel = bps,
 				Depth = depth,
@@ -494,7 +494,7 @@ namespace VncSharp
 									// see if it is necessary to synchronize this event with the UI thread.
 									if (VncUpdate.Target is System.Windows.Forms.Control) {
 										Control target = VncUpdate.Target as Control;
-										if (target != null)
+										if (target != null && !target.IsDisposed)
 											target.Invoke(VncUpdate, new object[] { this, e });
 									} else {
 										// Target is not a WinForms control, so do it on this thread...
@@ -531,7 +531,7 @@ namespace VncSharp
 				ConnectionLost.Target is System.Windows.Forms.Control) {
 				Control target = ConnectionLost.Target as Control;
 
-				if (target != null)
+				if (target != null && !target.IsDisposed)
 					target.Invoke(ConnectionLost, new object[] {this, EventArgs.Empty});
 				else
 					ConnectionLost(this, EventArgs.Empty);
