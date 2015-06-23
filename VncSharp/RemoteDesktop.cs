@@ -608,6 +608,8 @@ namespace VncSharp
 						System.Diagnostics.Debug.Assert(desktop != null);
 						DrawDesktopImage(desktop, pe.Graphics);
 						break;
+					case RuntimeState.Connecting:
+					case RuntimeState.Disconnecting:
 					case RuntimeState.Disconnected:
 						// Do nothing, just black background.
 						break;
@@ -774,10 +776,10 @@ namespace VncSharp
 				if (Control.MouseButtons == MouseButtons.Right)  mask += 4;
 
 				Point adjusted = desktopPolicy.UpdateRemotePointer(current);
-			    if (adjusted.X < 0 || adjusted.Y < 0)
-			    {
-			        Console.WriteLine("UpdateRemotePointer Warning: X:{0}, Y:{1}", adjusted.X, adjusted.Y);
-			    }
+				if (adjusted.X < 0 || adjusted.Y < 0)
+				{
+					Console.WriteLine("UpdateRemotePointer Warning: X:{0}, Y:{1}", adjusted.X, adjusted.Y);
+				}
 
 				vnc.WritePointerEvent(mask, desktopPolicy.UpdateRemotePointer(current));
 			}
