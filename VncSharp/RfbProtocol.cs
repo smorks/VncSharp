@@ -31,6 +31,9 @@ namespace VncSharp
 	/// </summary>
 	public class RfbProtocol
 	{
+		// Version Constants
+		public const string RFB_VERSION_ZERO			= "RFB 000.000\n";
+
 		// Encoding Constants
 		public const int RAW_ENCODING 					= 0;
 		public const int COPYRECT_ENCODING 				= 1;
@@ -53,8 +56,8 @@ namespace VncSharp
 		protected const byte POINTER_EVENT 				= 5;
 		protected const byte CLIENT_CUT_TEXT 			= 6;
 
-		protected int verMajor;	// Major version of Protocol--probably 3
-		protected int verMinor; // Minor version of Protocol--probably 3, 7, or 8
+		protected int verMajor = -1;	// Major version of Protocol--probably 3
+		protected int verMinor = -1;	// Minor version of Protocol--probably 3, 7, or 8
 
 		protected TcpClient tcp;		// Network object used to communicate with host
 		protected Stream stream;	// Stream object used to send/receive data
@@ -74,6 +77,14 @@ namespace VncSharp
 				return (float) verMajor + (verMinor * 0.1f);
 			}
 		}
+
+		/// <summary>
+		/// Gets or sets the proxy identifier to be send when using UltraVNC's repeater functionality
+		/// </summary>
+		/// <value>
+		/// The proxy identifier.
+		/// </value>
+		public int ProxyID { get; set; }
 
 		public BinaryReader Reader
 		{
@@ -155,24 +166,30 @@ namespace VncSharp
 			byte[] b = reader.ReadBytes(12);
 
 			// As of the time of writing, the only supported versions are 3.3, 3.7, and 3.8.
-			if (	b[0]  == 0x52 &&					// R
-					b[1]  == 0x46 &&					// F
-					b[2]  == 0x42 &&					// B
-					b[3]  == 0x20 &&					// (space)
-					b[4]  == 0x30 &&					// 0
-					b[5]  == 0x30 &&					// 0
-					b[6]  == 0x33 &&					// 3
-					b[7]  == 0x2e &&					// .
-				   (b[8]  == 0x30 ||                    // 0
-					b[8]  == 0x38) &&					// BUG FIX: Apple reports 8 
-				   (b[9] == 0x30 ||                     // 0
-					b[9] == 0x38) &&					// BUG FIX: Apple reports 8 
-				   (b[10] == 0x33 ||					// 3, 7, OR 8 are all valid and possible
-					b[10] == 0x36 ||					// BUG FIX: UltraVNC reports protocol version 3.6!
-					b[10] == 0x37 ||
-					b[10] == 0x38 ||
-					b[10] == 0x39) &&                   // BUG FIX: Apple reports 9					
-					b[11] == 0x0a)						// \n
+			if (System.Text.Encoding.ASCII.GetString(b) == RFB_VERSION_ZERO) // Repeater functionality
+			{
+				verMajor = 0;
+				verMinor = 0;
+			}
+			else if ( 
+				b[0]  == 0x52 &&					 // R
+				b[1]  == 0x46 &&					 // F
+				b[2]  == 0x42 &&					 // B
+				b[3]  == 0x20 &&					 // (space)
+				b[4]  == 0x30 &&					 // 0
+				b[5]  == 0x30 &&					 // 0
+				b[6]  == 0x33 &&					 // 3
+				b[7]  == 0x2e &&					 // .
+				(b[8]  == 0x30 ||					 // 0
+				 b[8]  == 0x38) &&					 // BUG FIX: Apple reports 8 
+				(b[9] == 0x30 ||					  // 0
+				 b[9] == 0x38) &&					 // BUG FIX: Apple reports 8 
+				(b[10] == 0x33 ||					 // 3, 7, OR 8 are all valid and possible
+				 b[10] == 0x36 ||					 // BUG FIX: UltraVNC reports protocol version 3.6!
+				 b[10] == 0x37 ||					 
+				 b[10] == 0x38 ||					 
+				 b[10] == 0x39) &&					// BUG FIX: Apple reports 9					
+				b[11] == 0x0a)						 // \n
 			{
 				// Since we only currently support the 3.x protocols, this can be assumed here.
 				// If and when 4.x comes out, this will need to be fixed--however, the entire 
@@ -214,6 +231,17 @@ namespace VncSharp
 						 string.Format("Protocol Version should be 3.3, 3.7, or 3.8 but is {0}.{1}", verMajor.ToString(), verMinor.ToString()));
 
 			writer.Write(GetBytes(string.Format("RFB 003.00{0}\n", verMinor.ToString())));
+			writer.Flush();
+		}
+
+		/// <summary>
+		/// Send the Target Proxy address, needs to be 250 bytes
+		/// </summary>
+		public void WriteProxyAddress()
+		{
+			byte[] proxyMessage = new byte[250];
+			GetBytes("ID:" + ProxyID + "\n").CopyTo(proxyMessage, 0);
+			writer.Write(proxyMessage);
 			writer.Flush();
 		}
 
@@ -465,9 +493,9 @@ namespace VncSharp
 
 			for (int i = 0; i < nbColors; i++, firstColor++)
 			{
-				mapEntries[firstColor, 0] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);    // R
-				mapEntries[firstColor, 1] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);    // G
-				mapEntries[firstColor, 2] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);    // B
+				mapEntries[firstColor, 0] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);	// R
+				mapEntries[firstColor, 1] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);	// G
+				mapEntries[firstColor, 2] = (byte)(ReadUInt16() * byte.MaxValue / ushort.MaxValue);	// B
 			}
 		} 
 
