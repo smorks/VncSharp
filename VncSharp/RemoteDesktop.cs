@@ -93,6 +93,7 @@ namespace VncSharp
 		bool fullScreenRefresh = false;		     // Whether or not to request the entire remote screen be sent.
 		VncDesktopTransformPolicy desktopPolicy;
 		RuntimeState state = RuntimeState.Disconnected;
+        private bool isScaled;
 
 		private enum RuntimeState {
 			Disconnected,
@@ -466,23 +467,40 @@ namespace VncSharp
 		/// <param name="scaled">Determines whether to use desktop scaling or leave it normal and clip.</param>
 		public void SetScalingMode(bool scaled)
 		{
-			if (scaled) {
-				desktopPolicy = new VncScaledDesktopPolicy(vnc, this);
-			} else {
-				desktopPolicy = new VncClippedDesktopPolicy(vnc, this);
-			}
+            isScaled = scaled;
 
-			AutoScroll = desktopPolicy.AutoScroll;
-			AutoScrollMinSize = desktopPolicy.AutoScrollMinSize;
+		    SetDesktopPolicy();
 
 			Invalidate();
 		}
 
-		/// <summary>
-		/// After protocol-level initialization and connecting is complete, the local GUI objects have to be set-up, and requests for updates to the remote host begun.
-		/// </summary>
-		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already in the Connected state.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>		
-		protected void Initialize()
+        private void SetDesktopPolicy()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(SetDesktopPolicy));
+            }
+            else
+            {
+                if (isScaled)
+                {
+                    desktopPolicy = new VncScaledDesktopPolicy(vnc, this);
+                }
+                else
+                {
+                    desktopPolicy = new VncClippedDesktopPolicy(vnc, this);
+                }
+
+                AutoScroll = desktopPolicy.AutoScroll;
+                AutoScrollMinSize = desktopPolicy.AutoScrollMinSize;
+            }
+        }
+
+        /// <summary>
+        /// After protocol-level initialization and connecting is complete, the local GUI objects have to be set-up, and requests for updates to the remote host begun.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already in the Connected state.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>		
+        protected void Initialize()
 		{
             // Finish protocol handshake with host now that authentication is done.
             EnsureConnection(false);
@@ -550,6 +568,8 @@ namespace VncSharp
             // remote framebuffer, and 32bpp pixel format (doesn't matter what the server is sending--8,16,
             // or 32--we always draw 32bpp here for efficiency).
             desktop = new Bitmap(vnc.Framebuffer.Width, vnc.Framebuffer.Height, PixelFormat.Format32bppPArgb);
+
+            SetDesktopPolicy();
 
             // Draw a "please wait..." message on the local desktop until the first
             // rectangle(s) arrive and overwrite with the desktop image.
