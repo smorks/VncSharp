@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="VncDesignModeDesktopPolicy.cs" />
+    <Compile Include="VncDesktopSizeChangedArgs.cs" />
     <Compile Include="VncDesktopTransformPolicy.cs" />
     <Compile Include="VncScaledDesktopPolicy.cs" />
     <Compile Include="VncClippedDesktopPolicy.cs" />

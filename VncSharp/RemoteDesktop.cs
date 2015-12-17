@@ -32,7 +32,7 @@ namespace VncSharp
 	/// Event Handler delegate declaration used by events that signal successful connection with the server.
 	/// </summary>
 	public delegate void ConnectCompleteHandler(object sender, ConnectEventArgs e);
-	
+
 	/// <summary>
 	/// When connecting to a VNC Host, a password will sometimes be required.  Therefore a password must be obtained from the user.  A default Password dialog box is included and will be used unless users of the control provide their own Authenticate delegate function for the task.  For example, this might pull a password from a configuration file of some type instead of prompting the user.
 	/// </summary>
@@ -50,29 +50,35 @@ namespace VncSharp
 		Alt
 	}
 
-	[ToolboxBitmap(typeof(RemoteDesktop), "Resources.vncviewer.ico")]
-	/// <summary>
-	/// The RemoteDesktop control takes care of all the necessary RFB Protocol and GUI handling, including mouse and keyboard support, as well as requesting and processing screen updates from the remote VNC host.  Most users will choose to use the RemoteDesktop control alone and not use any of the other protocol classes directly.
-	/// </summary>
-	public class RemoteDesktop : Panel
+    /// <summary>
+    /// The RemoteDesktop control takes care of all the necessary RFB Protocol and GUI handling, including mouse and keyboard support, as well as requesting and processing screen updates from the remote VNC host.  Most users will choose to use the RemoteDesktop control alone and not use any of the other protocol classes directly.
+    /// </summary>
+    [ToolboxBitmap(typeof(RemoteDesktop), "Resources.vncviewer.ico")]
+    public class RemoteDesktop : Panel
 	{
-		[Description("Raised after a successful call to the Connect() method.")]
-		/// <summary>
-		/// Raised after a successful call to the Connect() method.  Includes information for updating the local display in ConnectEventArgs.
-		/// </summary>
-		public event ConnectCompleteHandler ConnectComplete;
-		
-		[Description("Raised when the VNC Host drops the connection.")]
-		/// <summary>
-		/// Raised when the VNC Host drops the connection.
-		/// </summary>
-		public event EventHandler	ConnectionLost;
+        /// <summary>
+        /// Raised after a successful call to the Connect() method.  Includes information for updating the local display in ConnectEventArgs.
+        /// </summary>
+        [Description("Raised after a successful call to the Connect() method.")]
+        public event ConnectCompleteHandler ConnectComplete;
 
-		[Description("Raised when the VNC Host sends text to the client's clipboard.")]
-		/// <summary>
-		/// Raised when the VNC Host sends text to the client's clipboard. 
-		/// </summary>
-		public event EventHandler   ClipboardChanged;
+        /// <summary>
+        /// Raised when the remote screen is resized.
+        /// </summary>
+        [Description("Raised when the remote screen is resized.")]
+        public event DesktopSizeChangedHandler DesktopSizeChanged;
+
+        /// <summary>
+        /// Raised when the VNC Host drops the connection.
+        /// </summary>
+        [Description("Raised when the VNC Host drops the connection.")]
+        public event EventHandler	ConnectionLost;
+
+        /// <summary>
+        /// Raised when the VNC Host sends text to the client's clipboard. 
+        /// </summary>
+        [Description("Raised when the VNC Host sends text to the client's clipboard.")]
+        public event EventHandler   ClipboardChanged;
 
 		/// <summary>
 		/// Points to a Function capable of obtaining a user's password.  By default this means using the PasswordDialog.GetPassword() function; however, users of RemoteDesktop can replace this with any function they like, so long as it matches the delegate type.
@@ -118,13 +124,13 @@ namespace VncSharp
 			// Users of the control can choose to use their own Authentication GetPassword() method via the delegate above.  This is a default only.
 			GetPassword = new AuthenticateDelegate(PasswordDialog.GetPassword);
 		}
-		
-		[DefaultValue(5900)]
-		[Description("The port number used by the VNC Host (typically 5900)")]
-		/// <summary>
-		/// The port number used by the VNC Host (typically 5900).
-		/// </summary>
-		public int VncPort {
+
+        /// <summary>
+        /// The port number used by the VNC Host (typically 5900).
+        /// </summary>
+        [DefaultValue(5900)]
+        [Description("The port number used by the VNC Host (typically 5900)")]
+        public int VncPort {
 			get { 
 				return port; 
 			}
@@ -176,11 +182,11 @@ namespace VncSharp
 			}
 		}
 
-		[Description("The name of the remote desktop.")]
-		/// <summary>
-		/// The name of the remote desktop, or "Disconnected" if not connected.
-		/// </summary>
-		public string Hostname {
+        /// <summary>
+        /// The name of the remote desktop, or "Disconnected" if not connected.
+        /// </summary>
+        [Description("The name of the remote desktop.")]
+        public string Hostname {
 			get {
 				return vnc == null ? "Disconnected" : vnc.HostName;
 			}
@@ -206,16 +212,16 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is not in the Connected state.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
 		public void FullScreenUpdate()
 		{
-			InsureConnection(true);
+            EnsureConnection(true);
 			fullScreenRefresh = true;
 		}
 
 		/// <summary>
-		/// Insures the state of the connection to the server, either Connected or Not Connected depending on the value of the connected argument.
+		/// Ensures the state of the connection to the server, either Connected or Not Connected depending on the value of the connected argument.
 		/// </summary>
 		/// <param name="connected">True if the connection must be established, otherwise False.</param>
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is in the wrong state.</exception>
-		private void InsureConnection(bool connected)
+		private void EnsureConnection(bool connected)
 		{
 			// Grab the name of the calling routine:
 			string methodName = new System.Diagnostics.StackTrace().GetFrame(1).GetMethod().Name;
@@ -270,14 +276,15 @@ namespace VncSharp
 		/// <param name="scaled">Determines whether to use desktop scaling or leave it normal and clip.</param>
 		public void Connect(System.IO.Stream stream, bool viewOnly, bool scaled)
 		{
-			// TODO: Should this be done asynchronously so as not to block the UI?  Since an event 
-			// indicates the end of the connection, maybe that would be a better design.
-			InsureConnection(false);
+            // TODO: Should this be done asynchronously so as not to block the UI?  Since an event 
+            // indicates the end of the connection, maybe that would be a better design.
+            EnsureConnection(false);
 
 			// Start protocol-level handling and determine whether a password is needed
 			vnc = new VncClient();
 			vnc.ConnectionLost += new EventHandler(VncClientConnectionLost);
 			vnc.ServerCutText += new EventHandler(VncServerCutText);
+		    vnc.DesktopSizeChanged += Vnc_DesktopSizeChanged;
 
 			passwordPending = vnc.Connect(stream, viewOnly);
 
@@ -305,14 +312,20 @@ namespace VncSharp
 			}
 		}
 
-		/// <summary>
-		/// Connect to a VNC Host and determine whether or not the server requires a password.
-		/// </summary>
-		/// <param name="host">The IP Address or Host Name of the VNC Host.</param>
-		/// <exception cref="System.ArgumentNullException">Thrown if host is null.</exception>
-		/// <exception cref="System.ArgumentOutOfRangeException">Thrown if display is negative.</exception>
-		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already Connected.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
-		public void Connect(string host)
+        private void Vnc_DesktopSizeChanged(object sender, VncDesktopSizeChangedArgs e)
+        {
+            ResizeDesktop();
+            DesktopSizeChanged?.Invoke(sender, e);
+        }
+
+        /// <summary>
+        /// Connect to a VNC Host and determine whether or not the server requires a password.
+        /// </summary>
+        /// <param name="host">The IP Address or Host Name of the VNC Host.</param>
+        /// <exception cref="System.ArgumentNullException">Thrown if host is null.</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">Thrown if display is negative.</exception>
+        /// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already Connected.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
+        public void Connect(string host)
 		{
 			// Use Display 0 by default.
 			Connect(host, 0);
@@ -386,9 +399,9 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already Connected.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
 		public void Connect(string host, int display, bool viewOnly, bool scaled)
 		{
-			// TODO: Should this be done asynchronously so as not to block the UI?  Since an event 
-			// indicates the end of the connection, maybe that would be a better design.
-			InsureConnection(false);
+            // TODO: Should this be done asynchronously so as not to block the UI?  Since an event 
+            // indicates the end of the connection, maybe that would be a better design.
+            EnsureConnection(false);
 
 			if (host == null) throw new ArgumentNullException("host");
 			if (display < 0) throw new ArgumentOutOfRangeException("display", display, "Display number must be a positive integer.");
@@ -426,7 +439,7 @@ namespace VncSharp
 		/// <param name="password">The user's password.</param>
 		public void Authenticate(string password)
 		{
-			InsureConnection(false);
+            EnsureConnection(false);
 			if (!passwordPending) throw new InvalidOperationException("Authentication is only required when Connect() returns True and the VNC Host requires a password.");
 			if (password == null) throw new NullReferenceException("password");
 
@@ -471,8 +484,8 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is already in the Connected state.  See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>		
 		protected void Initialize()
 		{
-			// Finish protocol handshake with host now that authentication is done.
-			InsureConnection(false);
+            // Finish protocol handshake with host now that authentication is done.
+            EnsureConnection(false);
 			vnc.Initialize();
 			SetState(RuntimeState.Connected);
 			
@@ -517,7 +530,7 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is not already in the Connected state. See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
 		protected void SetupDesktop()
 		{
-			InsureConnection(true);
+            EnsureConnection(true);
 
 			// Create a new bitmap to cache locally the remote desktop image.  Use the geometry of the
 			// remote framebuffer, and 32bpp pixel format (doesn't matter what the server is sending--8,16,
@@ -528,12 +541,26 @@ namespace VncSharp
 			// rectangle(s) arrive and overwrite with the desktop image.
 			DrawDesktopMessage("Connecting to VNC host, please wait...");
 		}
-	
-		/// <summary>
-		/// Draws the given message (white text) on the local desktop (all black).
-		/// </summary>
-		/// <param name="message">The message to be drawn.</param>
-		protected void DrawDesktopMessage(string message)
+
+        protected void ResizeDesktop()
+        {
+            EnsureConnection(true);
+
+            // Create a new bitmap to cache locally the remote desktop image.  Use the geometry of the
+            // remote framebuffer, and 32bpp pixel format (doesn't matter what the server is sending--8,16,
+            // or 32--we always draw 32bpp here for efficiency).
+            desktop = new Bitmap(vnc.Framebuffer.Width, vnc.Framebuffer.Height, PixelFormat.Format32bppPArgb);
+
+            // Draw a "please wait..." message on the local desktop until the first
+            // rectangle(s) arrive and overwrite with the desktop image.
+            DrawDesktopMessage("Desktop resized, please wait...");
+        }
+
+        /// <summary>
+        /// Draws the given message (white text) on the local desktop (all black).
+        /// </summary>
+        /// <param name="message">The message to be drawn.</param>
+        protected void DrawDesktopMessage(string message)
 		{
 			System.Diagnostics.Debug.Assert(desktop != null, "Can't draw on desktop when null.");
 			// Draw the given message on the local desktop
@@ -558,7 +585,7 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is not already in the Connected state. See <see cref="VncSharp.RemoteDesktop.IsConnected" />.</exception>
 		public void Disconnect()
 		{
-			InsureConnection(true);
+            EnsureConnection(true);
 			vnc.ConnectionLost -= new EventHandler(VncClientConnectionLost);
 			vnc.ServerCutText -= new EventHandler(VncServerCutText);
 			vnc.Disconnect();
@@ -938,7 +965,7 @@ namespace VncSharp
 		/// <exception cref="System.InvalidOperationException">Thrown if the RemoteDesktop control is not in the Connected state.</exception>
 		public void SendSpecialKeys(SpecialKeys keys, bool release)
 		{
-			InsureConnection(true);
+            EnsureConnection(true);
 			// For all of these I am sending the key presses manually instead of calling
 			// the keyboard event handlers, as I don't want to propegate the calls up to the 
 			// base control class and form.

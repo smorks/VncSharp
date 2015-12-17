@@ -42,6 +42,9 @@ namespace VncSharp
 		public const int HEXTILE_ENCODING 				= 5;
 		public const int ZRLE_ENCODING 					= 16;
 
+        // Pseudo Encoding Constants
+	    public const int DESKTOP_SIZE_ENCODING          = -223;
+
 		// Server to Client Message-Type constants
 		public const int FRAMEBUFFER_UPDATE 			= 0;
 		public const int SET_COLOUR_MAP_ENTRIES			= 1;
@@ -366,7 +369,7 @@ namespace VncSharp
 		/// Tell the server which encodings are supported by the client. See RFB Doc v. 3.8 section 6.3.3.
 		/// </summary>
 		/// <param name="encodings">An array of integers indicating the encoding types supported.  The order indicates preference, where the first item is the first preferred.</param>
-		public void WriteSetEncodings(uint[] encodings)
+		public void WriteSetEncodings(int[] encodings)
 		{
 			writer.Write(SET_ENCODINGS);
 			WritePadding(1);

@@ -30,6 +30,8 @@ namespace VncSharp
 	/// Delegate definition of an Event Handler used to indicate a Framebuffer Update has been received.
 	/// </summary>
 	public delegate void VncUpdateHandler(object sender, VncEventArgs e);
+
+    public delegate void DesktopSizeChangedHandler(object sender, VncDesktopSizeChangedArgs e);
 	
 	public class VncClient
 	{
@@ -50,6 +52,8 @@ namespace VncSharp
 		/// Raised when the server caused the local clipboard to be filled.
 		/// </summary>
 		public event EventHandler ServerCutText;
+
+	    public event DesktopSizeChangedHandler DesktopSizeChanged;
 			
 		public VncClient()
 		{
@@ -379,12 +383,13 @@ namespace VncSharp
 
 			rfb.WriteSetPixelFormat(client);	// just use the server's framebuffer format
 
-			rfb.WriteSetEncodings(new uint[] {	RfbProtocol.ZRLE_ENCODING,
+			rfb.WriteSetEncodings(new int[] {	RfbProtocol.ZRLE_ENCODING,
 												RfbProtocol.HEXTILE_ENCODING, 
 											//	RfbProtocol.CORRE_ENCODING, // CoRRE is buggy in some hosts, so don't bother using
 												RfbProtocol.RRE_ENCODING,
 												RfbProtocol.COPYRECT_ENCODING,
-												RfbProtocol.RAW_ENCODING });
+												RfbProtocol.RAW_ENCODING,
+                                                RfbProtocol.DESKTOP_SIZE_ENCODING});
 			
 			// Create an EncodedRectangleFactory so that EncodedRectangles can be built according to set pixel layout
 			factory = new EncodedRectangleFactory(rfb, client);
@@ -491,26 +496,42 @@ namespace VncSharp
 								Rectangle rectangle;
 								rfb.ReadFramebufferUpdateRectHeader(out rectangle, out enc);
 
-								// Build a derived EncodedRectangle type and pull-down all the pixel info
-								EncodedRectangle er = factory.Build(rectangle, enc);
-								er.Decode();
+							    if (enc == RfbProtocol.DESKTOP_SIZE_ENCODING)
+							    {
+							        var newBuffer = Framebuffer.FromPixelFormat(buffer.ToPixelFormat(), rectangle.Size.Width, rectangle.Size.Height);
+							        newBuffer.DesktopName = buffer.DesktopName;
+							        var newClient = GetClientFb(newBuffer);
+							        buffer = newBuffer;
+							        factory = new EncodedRectangleFactory(rfb, newClient);
+							        DesktopSizeChanged?.Invoke(this, new VncDesktopSizeChangedArgs(rectangle.Size));
+							    }
+							    else
+							    {
+							        // Build a derived EncodedRectangle type and pull-down all the pixel info
+							        EncodedRectangle er = factory.Build(rectangle, enc);
+							        er.Decode();
 
-								// Let the UI know that an updated rectangle is available, but check
-								// to see if the user closed things down first.
-								if (!CheckIfThreadDone() && VncUpdate != null) {
-									VncEventArgs e = new VncEventArgs(er);
+							        // Let the UI know that an updated rectangle is available, but check
+							        // to see if the user closed things down first.
+							        if (!CheckIfThreadDone() && VncUpdate != null)
+							        {
+							            VncEventArgs e = new VncEventArgs(er);
 
-									// In order to play nicely with WinForms controls, we do a check here to 
-									// see if it is necessary to synchronize this event with the UI thread.
-									if (VncUpdate.Target is System.Windows.Forms.Control) {
-										Control target = VncUpdate.Target as Control;
-										if (target != null && !target.IsDisposed)
-											target.Invoke(VncUpdate, new object[] { this, e });
-									} else {
-										// Target is not a WinForms control, so do it on this thread...
-										VncUpdate(this, new VncEventArgs(er));
-									}
-								}
+							            // In order to play nicely with WinForms controls, we do a check here to 
+							            // see if it is necessary to synchronize this event with the UI thread.
+							            if (VncUpdate.Target is System.Windows.Forms.Control)
+							            {
+							                Control target = VncUpdate.Target as Control;
+							                if (target != null && !target.IsDisposed)
+							                    target.Invoke(VncUpdate, new object[] {this, e});
+							            }
+							            else
+							            {
+							                // Target is not a WinForms control, so do it on this thread...
+							                VncUpdate(this, new VncEventArgs(er));
+							            }
+							        }
+							    }
 							}
 							break;
 						case RfbProtocol.BELL:
