@@ -860,31 +860,32 @@ namespace VncSharp
 			bool isProcessed = true;
 			switch(e.KeyCode)
 			{
-				case Keys.Tab:				keyChar = 0x0000FF09;		break;
-				case Keys.Enter:			keyChar = 0x0000FF0D;		break;
-				case Keys.Escape:			keyChar = 0x0000FF1B;		break;
-				case Keys.Home:				keyChar = 0x0000FF50;		break;
-				case Keys.Left:				keyChar = 0x0000FF51;		break;
-				case Keys.Up:				keyChar = 0x0000FF52;		break;
-				case Keys.Right:			keyChar = 0x0000FF53;		break;
-				case Keys.Down:				keyChar = 0x0000FF54;		break;
-				case Keys.PageUp:			keyChar = 0x0000FF55;		break;
-				case Keys.PageDown:			keyChar = 0x0000FF56;		break;
-				case Keys.End:				keyChar = 0x0000FF57;		break;
-				case Keys.Insert:			keyChar = 0x0000FF63;		break;
-				case Keys.ShiftKey:			keyChar = 0x0000FFE1;		break;
+                case Keys.Back:             keyChar = 0xff08; break;
+                case Keys.Tab:				keyChar = 0xFF09; break;
+				case Keys.Enter:			keyChar = 0xFF0D; break;
+				case Keys.Escape:			keyChar = 0xFF1B; break;
+				case Keys.Home:				keyChar = 0xFF50; break;
+				case Keys.Left:				keyChar = 0xFF51; break;
+				case Keys.Up:				keyChar = 0xFF52; break;
+				case Keys.Right:			keyChar = 0xFF53; break;
+				case Keys.Down:				keyChar = 0xFF54; break;
+				case Keys.PageUp:			keyChar = 0xFF55; break;
+				case Keys.PageDown:			keyChar = 0xFF56; break;
+				case Keys.End:				keyChar = 0xFF57; break;
+				case Keys.Insert:			keyChar = 0xFF63; break;
+				case Keys.ShiftKey:			keyChar = 0xFFE1; break;
 
 				// BUG FIX -- added proper Alt/CTRL support (Edward Cooke)
-				case Keys.Alt:              keyChar = 0x0000FFE9;       break;
-				case Keys.ControlKey:       keyChar = 0x0000FFE3;       break;
-				case Keys.LControlKey:      keyChar = 0x0000FFE3;       break;
-				case Keys.RControlKey:      keyChar = 0x0000FFE4;       break;
+				case Keys.Alt:              keyChar = 0xFFE9; break;
+				case Keys.ControlKey:       keyChar = 0xFFE3; break;
+				case Keys.LControlKey:      keyChar = 0xFFE3; break;
+				case Keys.RControlKey:      keyChar = 0xFFE4; break;
 			
-				case Keys.Menu:				keyChar = 0x0000FFE9;		break;
-				case Keys.Delete:			keyChar = 0x0000FFFF;		break;
-				case Keys.LWin:				keyChar = 0x0000FFEB;		break;
-				case Keys.RWin:				keyChar = 0x0000FFEC;		break;
-				case Keys.Apps:				keyChar = 0x0000FFEE;		break;
+				case Keys.Menu:				keyChar = 0xFFE9; break;
+				case Keys.Delete:			keyChar = 0xFFFF; break;
+				case Keys.LWin:				keyChar = 0xFFEB; break;
+				case Keys.RWin:				keyChar = 0xFFEC; break;
+				case Keys.Apps:				keyChar = 0xFFEE; break;
 				case Keys.F1:
 				case Keys.F2:
 				case Keys.F3:
@@ -899,46 +900,53 @@ namespace VncSharp
 				case Keys.F12:
 					keyChar = 0x0000FFBE + ((UInt32)e.KeyCode - (UInt32)Keys.F1);
 					break;
-				default:
-					keyChar = 0;
-					isProcessed = false;
-					break;
+                case Keys.OemPeriod: keyChar = '.'; break;
+                case Keys.Oemcomma: keyChar = ','; break;
+                case Keys.OemQuestion: keyChar = '/'; break;
+                case Keys.OemPipe: keyChar = '\\'; break;
+                case Keys.OemSemicolon: keyChar = ';'; break;
+                case Keys.OemQuotes: keyChar = '\''; break;
+                case Keys.Oemtilde: keyChar = '`'; break;
+                case Keys.Oemplus: keyChar = '='; break;
+                case Keys.OemMinus: keyChar = '-'; break;
+                case Keys.OemOpenBrackets: keyChar = '['; break;
+                case Keys.OemCloseBrackets: keyChar = ']'; break;
+                case Keys.NumLock: keyChar = 0xff7f; break;
+                case Keys.NumPad0:
+                case Keys.NumPad1:
+                case Keys.NumPad2:
+                case Keys.NumPad3:
+                case Keys.NumPad4:
+                case Keys.NumPad5:
+                case Keys.NumPad6:
+                case Keys.NumPad7:
+                case Keys.NumPad8:
+                case Keys.NumPad9:
+			        keyChar = 0xffb0 + ((uint) e.KeyCode - (uint) Keys.NumPad0);
+                    break;
+                case Keys.Multiply: keyChar = 0xffaa; break;
+                case Keys.Add: keyChar = 0xffab; break;
+                case Keys.Subtract: keyChar = 0xffad; break;
+                case Keys.Divide: keyChar = 0xffaf; break;
+                case Keys.Decimal: keyChar = 0xffae; break;
+                default:
+			        try
+			        {
+			            var c = (char) e.KeyValue;
+			            keyChar = c;
+			        }
+			        catch (Exception)
+			        {
+			            keyChar = 0;
+                        isProcessed = false;
+			        }
+			        break;
 			}
 
 			if(isProcessed)
 			{
 				vnc.WriteKeyboardEvent(keyChar, isDown);
 				e.Handled = true;
-			}
-		}
-
-		// HACK: the following overrides do a double check on DesignMode so 
-		// that if still in design mode, no messages are sent for 
-		// mouse/keyboard events (i.e., there won't be Host yet--
-		// NullReferenceException)			
-		protected override void OnKeyPress(KeyPressEventArgs e)
-		{
-			base.OnKeyPress (e);
-			if (DesignMode || !IsConnected)
-				return;
-			
-			if (e.Handled)
-				return;
-
-			if (e.KeyChar == '\r' || e.KeyChar == '\n' || e.KeyChar == '\t') return;
-	
-			if(Char.IsLetterOrDigit(e.KeyChar) || Char.IsWhiteSpace(e.KeyChar) || Char.IsPunctuation(e.KeyChar) ||
-				e.KeyChar == '~' || e.KeyChar == '`' || e.KeyChar == '<' || e.KeyChar == '>' ||
-				e.KeyChar == '|' || e.KeyChar == '=' || e.KeyChar == '+' || e.KeyChar == '$' || e.KeyChar == '^')
-			{
-				vnc.WriteKeyboardEvent((UInt32)e.KeyChar, true);
-				vnc.WriteKeyboardEvent((UInt32)e.KeyChar, false);
-			}
-			else if(e.KeyChar == '\b')
-			{
-				UInt32 keyChar = ((UInt32)'\b') | 0x0000FF00;
-				vnc.WriteKeyboardEvent(keyChar, true);
-				vnc.WriteKeyboardEvent(keyChar, false);
 			}
 		}
 
